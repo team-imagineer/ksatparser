@@ -2,4 +2,5 @@
 
 ```bash
 $ python ./setup.py install
+$ python demo/demo.py --input ./data/raw/problem/*.png
 ```
