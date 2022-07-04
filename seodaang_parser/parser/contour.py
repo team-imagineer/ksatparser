@@ -27,7 +27,7 @@ def get_problem(img: np.ndarray, cfg: Config):
     contours = sorted(contours, key=lambda x: cv2.boundingRect(x)[1])
 
     for contour in contours:
-        x, y, w, h = cv2.boundingRect(contour)
-        if w > cfg.min_width and h > cfg.min_height:
-            yield img[y : y + h, x : w + w]
+        (x, y, w, h) = cv2.boundingRect(contour)
+        # if w > cfg.min_width and h > cfg.min_height:
+        yield img[y : y + h, x : x + w]
 
