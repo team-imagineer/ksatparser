@@ -56,7 +56,7 @@ def get_dependency_links(filename):
 def get_about():
     about = {}
     basedir = os.path.abspath(os.path.dirname(__file__))
-    with open(os.path.join(basedir, "seodaang-parser", "about.py")) as f:
+    with open(os.path.join(basedir, "seodaang_parser", "about.py")) as f:
         exec(f.read(), about)
 
     return about
