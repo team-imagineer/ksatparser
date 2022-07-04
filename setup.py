@@ -3,7 +3,7 @@ import os
 import re
 from io import open
 
-from setuptools import find_packages, find_packages
+from setuptools import find_packages, setup
 
 
 def parse_requirements(filename):
@@ -62,12 +62,19 @@ def get_about():
     return about
 
 
-# about = get_about()
+about = get_about()
 dependency_links = get_dependency_links("requirements.txt")
 parsed_requirements = parse_requirements("requirements.txt")
 
-print(dependency_links, parsed_requirements)
 
 setup(
-    
+    name=about["__title__"],
+    version=about["__version__"],
+    author=about["__author__"],
+    author_email="chotnt741@gmail.com",
+    packages=find_packages(exclude=["*.tests", "*.tests.*", "tests.*", "tests"]),
+    dependency_links=dependency_links,
+    install_requires=parsed_requirements,
+    python_requires=">=3.7.0",
 )
+
