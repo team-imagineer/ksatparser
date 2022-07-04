@@ -10,7 +10,7 @@ def get_problem(img: np.ndarray, cfg: Config):
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     _, thresh = cv2.threshold(gray, cfg.threshold, 255, cv2.THRESH_BINARY)
 
-    kernel = np.ones((cfg.kernel.size[0], cfg.kernel.size[1]), np.uint8)
+    kernel = np.ones((cfg.kernel["size"][0], cfg.kernel["size"][1]), np.uint8)
     iterations = cfg.iterations
 
     # stackoverflow: merging-regions-in-mser-for-identifying-text-lines-in-ocr
@@ -29,8 +29,5 @@ def get_problem(img: np.ndarray, cfg: Config):
     for contour in contours:
         x, y, w, h = cv2.boundingRect(contour)
         if w > cfg.min_width and h > cfg.min_height:
-            roi = img[y : y + h, x : w + w]
-            if roi.size != 0:
-                cv2.imshow("roi", roi)
-                cv2.waitKey()
-                cv2.destroyAllWindows()
+            yield img[y : y + h, x : w + w]
+
