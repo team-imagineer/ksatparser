@@ -1,9 +1,0 @@
-{
-  "threshold": 220,
-  "kernel": {
-    "size": [5, 25]
-  },
-  "iterations": 5,
-  "min_width": 500,
-  "min_height": 100
-}
