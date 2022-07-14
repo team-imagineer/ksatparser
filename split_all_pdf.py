@@ -9,6 +9,8 @@ pdf_dir = Path("./pdf")
 num = 1000
 i = 0
 for pdf_file in tqdm(os.listdir(pdf_dir)):
+    if pdf_file[-4:] != ".pdf":
+        continue
     if num <= i:
         break
     pdf_path = pdf_dir/pdf_file

@@ -299,7 +299,7 @@ def make_output_dir(test_name, jimoon_names, probs, output_dir):
         os.mkdir(output_dir / str(year) / str(month))
 
     # ~2020
-    if year < 2021:
+    if year < 2022:
         probs_len = len(probs)
 
         # 2014~2016 (A/B)
@@ -475,8 +475,8 @@ def save_jimoon_prob(test_name, long_block, jimoons, jimoon_names, probs, prob_n
 
     test_dir = ''  # test output dir
 
-    # ~2020
-    if year < 2021:
+    # ~2021
+    if year < 2022:
         if len(tmp) == 3:
             # ~2016
             # ex) 2016_9_A
