@@ -5,7 +5,11 @@ import cv2
 from pathlib import Path
 import pdfplumber
 import tempfile
+import matplotlib.pyplot as plt
 
+def imshow(img):
+    fig, ax= plt.subplots(1,1, figsize=(20,1000))
+    ax.imshow(img, cmap = "gray")
 
 def parse_pdf(pdf_path, output_dir):
     """
@@ -19,6 +23,8 @@ def parse_pdf(pdf_path, output_dir):
         1 : success
         -1 : fail
     """
+    print(f"parse {pdf_path} start")
+
     # pdf_path, output_dir to pathlib.Path
     if isinstance(pdf_path, str):
         pdf_path = Path(pdf_path)
@@ -83,6 +89,8 @@ def parse_pdf(pdf_path, output_dir):
     make_output_dir(test_name, jimoon_names, probs, output_dir)
 
     save_jimoon_prob(test_name, long_block, jimoons, jimoon_names, probs, prob_names, output_dir)
+
+    print(f"parse {test_name} complete")
 
 
 def pdf2pngs(pdf_path):
@@ -201,6 +209,10 @@ def get_elements_list(pdf_path, imgs, jbox_width):
                 y0, y1 = y1, y0
             x0, _, x2, _ = T[1][0]
 
+            # T가 없는 페이지는 제외
+            if x2-x0 < 2*jbox_width:
+                continue
+
             # extract jbox candidates
             jbox_candidates = []
             for l in lines:
@@ -246,14 +258,15 @@ def make_output_dir(test_name, jimoon_names, probs, output_dir):
     '''
     description: make output dir according to test year's specific problem structure
     example)
-    ## ~2016
+
+    ## 2014~2016
     2014/6/A/1-3/p.png
     2014/6/A/1-3/1.png
     2014/6/B/1-3/2.png
     2014/6/B/1-3/3.png
     2014/6/B/4/4.png
 
-    ## 2017~2020
+    ## ~2013, 2017~2020
     2020/6/1-3/p.png
     2020/6/1-3/1.png
     2020/6/1-3/2.png
@@ -289,16 +302,16 @@ def make_output_dir(test_name, jimoon_names, probs, output_dir):
     if year < 2021:
         probs_len = len(probs)
 
-        # ~2016 (A/B)
-        if year < 2017 and len(cat) != 0:
+        # 2014~2016 (A/B)
+        if 2014 <= year < 2017 and len(cat) != 0:
             test_dir = output_dir / str(year) / str(month) / cat
             # make A/B dir
             if not os.path.exists(test_dir):
                 os.mkdir(test_dir)
 
 
-        # 2017~2020 (공통) - (common)
-        elif 2017 <= year:
+        # ~2013, 2017~2020 (공통) - (common)
+        else:
             test_dir = output_dir / str(year) / str(month)
 
         visit = [False] * (probs_len + 1)
@@ -316,7 +329,7 @@ def make_output_dir(test_name, jimoon_names, probs, output_dir):
 
 
     # 2021~ (화작/언메) - (writing/media)
-    elif 2021 <= year:
+    else:
 
         # make common writing media dir
         if not os.path.exists(output_dir / str(year) / str(month) / 'common'):
@@ -398,6 +411,7 @@ def get_contour_ends(long_block):
     description : make contours
     return : contours' end y value
     '''
+
     # pre-processing
     _, thresh = cv2.threshold(long_block, 220, 255, cv2.THRESH_BINARY)
     thresh = cv2.bitwise_not(thresh)
@@ -413,7 +427,6 @@ def get_contour_ends(long_block):
 
     # sort y-axis
     contours = sorted(contours, key=lambda x: cv2.boundingRect(x)[1])
-    print(len(contours))
 
     # ends list
     ends = []
@@ -455,7 +468,6 @@ def save_jimoon_prob(test_name, long_block, jimoons, jimoon_names, probs, prob_n
         elements.append((y, 2, ''))
 
     elements.sort()
-    print(elements)
 
     tmp = test_name.split('_')
     year = int(tmp[0])
@@ -493,3 +505,52 @@ def save_jimoon_prob(test_name, long_block, jimoons, jimoon_names, probs, prob_n
                     cv2.imwrite(str(test_dir / name / (name + ".png")), part)
                 else:  # concluded in last jimoon
                     cv2.imwrite(str(test_dir / last_jimoon / (name + ".png")), part)
+    # ~2021
+    else:
+        common_prob_len = 34
+        prob_len = 45
+
+        test_dir = output_dir / str(year) / str(month)
+
+        # split and save
+        last_jimoon = "0-0"  # check if problem is in lastest jimoon
+
+        # to check if problem is now media
+        old_name = '0'
+        media = False
+
+        for i in range(len(elements) - 1):
+            y0, cat, name = elements[i]
+            y1, _, _ = elements[i + 1]
+
+            part = long_block[y0:y1, :]
+
+            # pass the empty space
+            if cat == 2:
+                continue
+
+            # check if problems is no in media part
+            if int(old_name.split('-')[0]) > int(name.split('-')[0]):
+                media = True
+
+            if int(name.split('-')[0]) <= 34:
+                test_dir = test_dir/"common"
+            elif media:
+                test_dir = test_dir/"media"
+            else:
+                test_dir = test_dir/"writing"
+
+            # jimoon
+            if cat == 0:
+                cv2.imwrite(str(test_dir / name / "p.png"), part)
+                last_jimoon = name
+
+            # problem
+            elif cat == 1:
+                if int(last_jimoon.split('-')[1]) < int(name):  # not in last jimoon
+                    cv2.imwrite(str(test_dir / name / (name + ".png")), part)
+                else:  # concluded in last jimoon
+                    cv2.imwrite(str(test_dir / last_jimoon / (name + ".png")), part)
+
+            old_name = name
+
