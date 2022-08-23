@@ -54,7 +54,7 @@ def get_contour_ends(long_block, kernel_width=15, kernel_height=25, iterations=5
     """
 
     # pre-processing
-    _, thresh = cv2.threshold(long_block, 280, 280, cv2.THRESH_BINARY)
+    _, thresh = cv2.threshold(long_block, 220, 255, cv2.THRESH_BINARY)
     thresh = cv2.bitwise_not(thresh)
 
     kernel = np.ones((kernel_width, kernel_height))
@@ -72,7 +72,7 @@ def get_contour_ends(long_block, kernel_width=15, kernel_height=25, iterations=5
     # ends list
     ends = []
 
-    min_width, min_height = 250, 200
+    min_width, min_height = 250, 230
     for contour in contours:
         (x, y, w, h) = cv2.boundingRect(contour)
         if w >= min_width and h > min_height:
@@ -115,8 +115,10 @@ def find_problem_words(words):
                 print(w)
 
     for w in words:
-        if '.' in w['text'] and w['text'].split('.')[0].isdigit():
+        if '.' in w['text'] and w['text'].split('.')[0][-1].isdigit():
             probs.append(w)
+
+    print(f"문제 word\n{probs}")
     return probs
 
 
@@ -130,8 +132,11 @@ def find_jimoon_words(words):
     """
     jimoons = []
     for word in words:
-        if ']' in word["text"] and word["text"][0] == '[' and ('～' in word['text'] or '~' in word['text']):
-            jimoons.append(word)
+        if ']' in word["text"] and word["text"][0] == '[':
+            inword = word['text'].split('[')[1].split(']')[0]
+            if ('～' in inword or '~' in inword):
+                jimoons.append(word)
+    print(f"지문 word\n{jimoons}")
     return jimoons
 
 
@@ -147,4 +152,4 @@ def get_min_max_x(img):
         if not all(thresh[:, i]):
             xmax = i
             break
-    return xmin,xmaxㄷ
+    return xmin, xmax

@@ -5,7 +5,7 @@ import cv2
 from pathlib import Path
 import pdfplumber
 import tempfile
-from utils import *
+from .utils import *
 
 
 def parse_solution(pdf_path, output_dir):

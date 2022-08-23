@@ -39,6 +39,7 @@ def parse_problem(pdf_path, output_dir):
 
     blocks, jimoons_list, jimoon_names, probs_list, prob_names = get_elements_list(pdf_path, imgs, jbox_width)
 
+
     # for test
     for b in blocks:
         print(b.shape)
@@ -67,12 +68,14 @@ def parse_problem(pdf_path, output_dir):
 
         for x0, y0, x1, y1 in probs_list[i]:
             prob_idx += 1
-            if x0 >= 30:  # delete not a problem
-                continue
+            # print(prob_names[prob_idx])
+            # if x0 >= 30:  # delete not a problem
+            #     continue
             y0 += add_height
             y1 += add_height
             probs.append((x0, y0, x1, y1))
             tmp_prob_names.append(prob_names[prob_idx])
+            # print(prob_names[prob_idx])
 
         add_height += block.shape[0]
 
@@ -244,10 +247,24 @@ def save_problems(pdf_path, long_block, jimoons, jimoon_names, probs, prob_names
         name = jimoon_names[i]
         elements.append((y, 0, name))
 
+    # problem이 아닌 것들 처리
+    problem_index = 1
     for i, (_, y, _, _) in enumerate(probs):
         if y<0:
             y = 0
         name = prob_names[i]
+
+        for k in reversed(range(len(name))):
+            if not name[k].isdigit():
+                name = name[k + 1:]
+                break
+
+        # 문제 번호와 맞지 않는 경우 제외
+        if name != str(problem_index):
+            continue
+
+        problem_index += 1
+
         elements.append((y, 1, name))
 
     for y in contour_ends:
@@ -278,12 +295,16 @@ def save_problems(pdf_path, long_block, jimoons, jimoon_names, probs, prob_names
 
         # problem
         elif cat == 1:
+
             file_name = '_'.join([test_name, element_name]) + ".png"
             # if int(last_jimoon.split('-')[1]) < int(element_name):  # not in last jimoon
             # else:  # concluded in last jimoon
 
         else:
             continue
+
+        print(f'save {element_name}')
+        print(f'next element : {en}')
         try:
             cv2.imwrite(str(output_dir / file_name), part)
         except Exception as e:
