@@ -27,20 +27,23 @@ todo = [y+'_'+m for m in months for y in years]
 print(todo)
 # todo = ['2019_11']
 
-
+error_files = []
+error_msgs = []
 
 for pdf_file in os.listdir(pdf_dir):
     try:
         file_type = pdf_file[-4:]
         file_name = pdf_file[:-4]
         month = pdf_file[:-4].split('_')[1]
+        file_ym = file_name.split('_')[0]+'_'+file_name.split('_')[1]
         if file_type != ".pdf":
             continue
-        if not file_name in todo:
+        if not file_ym in todo:
             continue
         print(pdf_file)
 
         pdf_path = pdf_dir/pdf_file
         ksatparser.parse_problem(pdf_path, output_dir)
     except Exception as e:
-        print(e)
+        error_files.append(pdf_file)
+        error_msgs.append(e)

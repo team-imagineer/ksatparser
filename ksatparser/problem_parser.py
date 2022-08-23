@@ -69,8 +69,8 @@ def parse_problem(pdf_path, output_dir):
         for x0, y0, x1, y1 in probs_list[i]:
             prob_idx += 1
             # print(prob_names[prob_idx])
-            # if x0 >= 30:  # delete not a problem
-            #     continue
+            if x0 >= 40:  # delete not a problem
+                continue
             y0 += add_height
             y1 += add_height
             probs.append((x0, y0, x1, y1))
