@@ -8,6 +8,7 @@
 pdf/
 output/
 tmp/
+result/
 
 .DS_Store
 
