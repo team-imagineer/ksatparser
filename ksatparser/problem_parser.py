@@ -205,7 +205,7 @@ def get_elements_list(pdf_path, imgs, jbox_width):
                 for prob in probs:
                     (px0, py0, px1, py1), name = prob
                     if xmin <= px0 < xmax:
-                        prob = px0 - xmin, py0 - ymin, px1 - xmin, y1 - ymin
+                        prob = px0 - xmin, max(py0 - ymin,0), px1 - xmin, y1 - ymin
                         probs_list[-1].append(prob)
                         prob_names.append(name)
 
@@ -213,7 +213,7 @@ def get_elements_list(pdf_path, imgs, jbox_width):
                 for jimoon in jimoons:
                     (jx0, jy0, jx1, jy1), name = jimoon
                     if xmin <= jx0 < xmax:
-                        jimoon = jx0 - xmin, jy0 - ymin, jx1 - xmin, jy1 - ymin
+                        jimoon = jx0 - xmin, max(jy0 - ymin,0), jx1 - xmin, jy1 - ymin # 지문 에러 제거 (block 바깥으로 좌표가 넘어가는 경우)
                         jimoons_list[-1].append(jimoon)
                         jimoon_names.append(name)
     return blocks, jimoons_list, jimoon_names, probs_list, prob_names
