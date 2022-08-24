@@ -6,9 +6,10 @@ from pathlib import Path
 import pdfplumber
 import tempfile
 from .utils import *
+from collections import defaultdict
 
 
-def parse_solution(pdf_path, output_dir):
+def parse_ebs_solution(pdf_path, output_dir):
     """
     Description:
         parse pdf into content(지문) & problem(문제)
@@ -25,21 +26,7 @@ def parse_solution(pdf_path, output_dir):
 
     imgs = pdf2pngs(pdf_path)
 
-    # canny preprocessing
-    thresh1 = 200
-    thresh2 = 20
-    dst = cv2.Canny(imgs[0], thresh1, thresh2)
-
-    # problematic hough
-    lines = cv2.HoughLinesP(dst, 1, np.pi / 180, 50, None, 100, 2)
-
-    T = extract_T(lines)
-    x0, _, x2, _ = T[1]
-
-    # jimoon box width
-    jbox_width = int(((x2 - x0) / 2) * 0.85)  # T의 width의 절반의 0.85배 이상을 jimoon box 의 width라고 봄
-
-    blocks, jimoons_list, jimoon_names, probs_list, prob_names = get_elements_list(pdf_path, imgs, jbox_width)
+    blocks, jimoons_list, jimoon_names, probs_list, prob_names = get_ebs_solution_elements(pdf_path, imgs)
 
     # for test
     for b in blocks:
@@ -56,21 +43,27 @@ def parse_solution(pdf_path, output_dir):
     # concatenate jimoons_list, probs_list
     add_height = 0
     jimoons = []
+
     tmp_prob_names = []  # to prevent not problem names are included. ex) 보기문의 문장 안에 "3."
     probs = []
-    prob_idx = -1
+    prob_idx = -1 # 문제 세는
+    num_dict = defaultdict(bool) # 해설지의 경우, 답이 먼저 나오기 때문에 이전에 나온지 있는지 확인
 
     for i, block in enumerate(blocks):
 
         for x0, y0, x1, y1 in jimoons_list[i]:
+            # ebs해설에서는 사용 X
+            # if x0 >= 60:  # delete not a jimoon
+            #     continue
             y0 += add_height
             y1 += add_height
             jimoons.append((x0, y0, x1, y1))
 
         for x0, y0, x1, y1 in probs_list[i]:
             prob_idx += 1
-            if x0 >= 30:  # delete not a problem
-                continue
+            # ebs해설에서는 사용 X
+            # if x0 >= 60:  # delete not a problem
+            #     continue
             y0 += add_height
             y1 += add_height
             probs.append((x0, y0, x1, y1))
@@ -81,33 +74,37 @@ def parse_solution(pdf_path, output_dir):
     # prob_names change
     prob_names = tmp_prob_names
 
-    save_problems(pdf_path, long_block, jimoons, jimoon_names, probs, prob_names, output_dir)
+    contour_ends = []
+
+    save_ebs_solution(pdf_path, long_block, jimoons, jimoon_names, probs, prob_names, contour_ends, output_dir)
 
     print(f"parse {pdf_path} complete")
 
 
-def extract_T(lines):
-    """
-    Args:
-        lines:
-        xmid: 원래 vertical line의 x값
+def get_top_bottom_horizontal_lines(img):
+    # canny preprocessing
+    thresh1 = 200
+    thresh2 = 20
+    dst = cv2.Canny(img, thresh1, thresh2)
 
-    Returns:(max length vertical line, max length horizontal line
-    """
-    xlen = []
-    ylen = []
-    maxx = 0
-    maxy = 0
-    for i, line in enumerate(lines):
-        x1,y1,x2,y2 = line[0]
-        xlen.append(abs(x2-x1))
-        ylen.append(abs(y2-y1))
-    xi = xlen.index(max(xlen))
-    yi = ylen.index(max(ylen))
-    return lines[yi][0], lines[xi][0]
+    # problematic hough
+    lines = cv2.HoughLinesP(dst, 1, np.pi / 180, 50, None, 100, 2)
+
+    horizontal_lines = []
+    for line in lines:
+        xlen = abs(line[0][2] - line[0][0])
+        width_thresh = img.shape[1] * 0.6
+        if xlen >= width_thresh:
+            horizontal_lines.append(line[0])
+
+    horizontal_lines.sort(key=lambda x:x[1])
+
+    top_line = horizontal_lines[0]
+    bottom_line = horizontal_lines[-1]
+    return top_line, bottom_line
 
 
-def get_elements_list(pdf_path, imgs, jbox_width):
+def get_ebs_solution_elements(pdf_path, imgs):
     blocks = []
     probs_list = []
     jimoons_list = []
@@ -139,7 +136,6 @@ def get_elements_list(pdf_path, imgs, jbox_width):
                 jimoons.append((xys, jimoon_name))
             # print(jimoons)
             # print(jimoon_words)
-            # print("problem!!!@")
 
             # problem
             prob_words = find_problem_words(words)
@@ -152,144 +148,139 @@ def get_elements_list(pdf_path, imgs, jbox_width):
             # print(probs)
             # print(prob_words)
 
-                # divide left and right
-            # canny preprocess
-            thresh1 = 500
-            thresh2 = 300
-            dst = cv2.Canny(img, thresh1, thresh2)
+            top_hline, bottom_hline = get_top_bottom_horizontal_lines(img)
+            ymin = top_hline[1]
+            ymax = bottom_hline[1]
+            xs = (top_hline[0], top_hline[2], bottom_hline[0], bottom_hline[2])
+            xmin, xmax = min(xs), max(xs)
 
-            # problematic hough
-            lines = cv2.HoughLinesP(dst, 1, np.pi / 180, 50, None, 100, 1)
+            # 수평선이 남아있는 것을 방지
+            ymin += 7
+            ymax -= 7
 
-            # extract T
-            vertline, horline = extract_T(lines)
+            blocks.append(img[ymin:ymax, xmin:xmax])
 
-            if i==0:
-                x1, y0, _, y1 = vertline # x1은 첫페이지에서 고정
-                if y0 > y1:
-                    y0, y1 = y1, y0
-            _, tmp_y0, _, tmp_y1 = vertline
-            y1 = max(tmp_y0, tmp_y1)
-            _, y0, _, _ = horline
+            probs_list.append([])
+            for prob in probs:
+                (px0, py0, px1, py1), name = prob
+                if xmin <= px0 < xmax:
+                    prob = px0 - xmin, py0 - ymin, px1 - xmin, y1 - ymin
+                    probs_list[-1].append(prob)
+                    prob_names.append(name)
 
-            x0,x2 = get_min_max_x(img)
+            jimoons_list.append([])
+            for jimoon in jimoons:
+                (jx0, jy0, jx1, jy1), name = jimoon
+                if xmin <= jx0 < xmax:
+                    jimoon = jx0 - xmin, jy0 - ymin, jx1 - xmin, jy1 - ymin
+                    jimoons_list[-1].append(jimoon)
+                    jimoon_names.append(name)
 
-            # T가 없는 페이지는 제외
-            if x2-x0 < 2*jbox_width:
-                continue
-
-            # extract jbox candidates
-            jbox_candidates = []
-            for l in lines:
-                l = l[0]
-                if abs(l[2] - l[0]) >= jbox_width:
-                    overlap = False
-                    for ll in jbox_candidates:
-                        if abs(ll[1] - l[1]) < 6:
-                            overlap = True
-                    if not overlap:
-                        jbox_candidates.append(l)
-
-            # T preprocess (dilate spaces)
-            x0 -= 20
-            x2 += 20
-            y0 += 7
-            mid_margin = 7
-
-            # divide left&right and preprocess
-            for xmin, ymin, xmax, ymax in [(x0, y0, x1 - mid_margin, y1), (x1 + mid_margin, y0, x2, y1)]:
-                blocks.append(img[ymin:ymax, xmin:xmax])
-
-                probs_list.append([])
-                for prob in probs:
-                    (px0, py0, px1, py1), name = prob
-                    if xmin <= px0 < xmax:
-                        prob = px0 - xmin, py0 - ymin, px1 - xmin, y1 - ymin
-                        probs_list[-1].append(prob)
-                        prob_names.append(name)
-
-                jimoons_list.append([])
-                for jimoon in jimoons:
-                    (jx0, jy0, jx1, jy1), name = jimoon
-                    if xmin <= jx0 < xmax:
-                        jimoon = jx0 - xmin, jy0 - ymin, jx1 - xmin, jy1 - ymin
-                        jimoons_list[-1].append(jimoon)
-                        jimoon_names.append(name)
     return blocks, jimoons_list, jimoon_names, probs_list, prob_names
 
 
-def save_problems(pdf_path, long_block, jimoons, jimoon_names, probs, prob_names, output_dir):
-    '''
-        preresquite : run make_output_dir() method before run this method
-        description : split long block into jimoons and probs and save it into already maden output dir
-        save jimoon and prob according to test year's specific problem structure.
-        refer to make_output_dir
-        split algorithm is implemented by 3 elements (jimoons, probs, contour_end)
-    '''
-    test_name = os.path.basename(pdf_path).split('.')[0]
+def save_ebs_solution(pdf_path, long_block, jimoons, jimoon_names, probs, prob_names, contour_ends, output_dir):
+        '''
+            preresquite : run make_output_dir() method before run this method
+            description : split long block into jimoons and probs and save it into already maden output dir
+            save jimoon and prob according to test year's specific problem structure.
+            refer to make_output_dir
+            split algorithm is implemented by 3 elements (jimoons, probs, contour_end)
+        '''
+        test_name = os.path.basename(pdf_path).split('.')[0]
 
-    output_dir = Path(output_dir)
-    if not os.path.exists(output_dir):
-        os.mkdir(output_dir)
+        output_dir = Path(output_dir)
+        if not os.path.exists(output_dir):
+            os.mkdir(output_dir)
 
-    contour_ends = get_contour_ends(long_block)
+        # make elements list with jimoons' y0, probs' y0, contour ends' y value
+        # elements : list((y, category, name))
+        # element category : jimoon - 0, prob - 1, contour end -
+        # element name : ex) jimoon - "11-13", prob - "12", contour end - ""
+        elements = []
 
-    # make elements list with jimoons' y0, probs' y0, contour ends' y value
-    # elements : list((y, category, name))
-    # element category : jimoon - 0, prob - 1, contour end - 2
-    # element name : ex) jimoon - "11-13", prob - "12", contour end - ""
-    elements = []
+        for i, (_, y, _, _) in enumerate(jimoons):
+            if y < 0:
+                y = 0
+            name = jimoon_names[i]
+            elements.append((y, 0, name))
 
-    for i, (_, y, _, _) in enumerate(jimoons):
-        if y<0:
-            y = 0
-        name = jimoon_names[i]
-        elements.append((y, 0, name))
+        # problem이 아닌 것들 처리
+        problem_dict = defaultdict(bool)
+        problem_index = 1
+        for i, (_, y, _, _) in enumerate(probs):
+            if y < 0:
+                y = 0
 
-    for i, (_, y, _, _) in enumerate(probs):
-        if y<0:
-            y = 0
-        name = prob_names[i]
-        elements.append((y, 1, name))
+            name = prob_names[i]
 
-    for y in contour_ends:
-        if y<0:
-            y = 0
-        elements.append((y, 2, ''))
+            for k in reversed(range(len(name))):
+                if not name[k].isdigit():
+                    name = name[k + 1:]
+                    break
 
-    elements.sort()
+            # ebs해설지에서 정답으로 한번 낳온 후에 해설이 나옴
+            if not problem_dict[int(name)]:
+                problem_dict[int(name)] = True
+                continue
 
-    tmp = test_name.split('_')
-    year = int(tmp[0])
-    month = int(tmp[1])
+            # 문제 번호와 맞지 않는 경우 제외
+            if name != str(problem_index):
+                continue
 
-    # split and save
-    last_jimoon = "0-0"  # check if problem is in lastest jimoon
-    jimoon_index = 1
-    for i in range(len(elements) - 1):
-        y0, cat, element_name = elements[i]
-        y1, ct, en = elements[i + 1]
+            problem_index += 1
 
-        part = long_block[y0:y1, :]
+            elements.append((y, 1, name))
 
-        # jimoon
-        if cat == 0:
-            file_name = '_'.join([test_name, "p"+str(jimoon_index)]) + ".png"
-            last_jimoon = element_name
-            jimoon_index += 1
+        for y in contour_ends:
+            if y < 0:
+                y = 0
+            elements.append((y, 2, ''))
 
-        # problem
-        elif cat == 1:
-            file_name = '_'.join([test_name, element_name]) + ".png"
-            # if int(last_jimoon.split('-')[1]) < int(element_name):  # not in last jimoon
-            # else:  # concluded in last jimoon
+        elements.sort()
 
-        else:
-            continue
-        try:
-            cv2.imwrite(str(output_dir / file_name), part)
-        except Exception as e:
-            print(e)
-            print(file_name, part.shape)
-            print(f"y0 : {y0}, y1 : {y1}")
-            print(f"{cat}, {element_name}, {ct}, {en}")
+        # 마지막 문제를 살리기 위해 추가
+        long_height = long_block.shape[0]
+        elements.append((long_height, 2, ''))
+
+        tmp = test_name.split('_')
+        year = int(tmp[0])
+        month = int(tmp[1])
+
+        # split and save
+        last_jimoon = "0-0"  # check if problem is in lastest jimoon
+        jimoon_index = 1
+        for i in range(len(elements) - 1):
+            y0, cat, element_name = elements[i]
+            y1, ncat, nen = elements[i + 1]
+
+            # 지문해설은 번호가 반복적으로 나오는 경우가 있음 (생략)
+            if cat == ncat == 0:
+                continue
+            part = long_block[y0:y1, :]
+
+            # jimoon
+            if cat == 0:
+                file_name = '_'.join([test_name, "p" + str(jimoon_index), "solution"]) + ".png"
+                last_jimoon = element_name
+                jimoon_index += 1
+
+            # problem
+            elif cat == 1:
+
+                file_name = '_'.join([test_name, element_name, "solution"]) + ".png"
+                # if int(last_jimoon.split('-')[1]) < int(element_name):  # not in last jimoon
+                # else:  # concluded in last jimoon
+
+            else:
+                continue
+
+            print(f'save {element_name}')
+            print(f'next element : {nen}')
+            try:
+                cv2.imwrite(str(output_dir / file_name), cut_bottom(part))
+            except Exception as e:
+                print(e)
+                print(file_name, part.shape)
+                print(f"y0 : {y0}, y1 : {y1}")
+                print(f"{cat}, {element_name}, {ncat}, {nen}")

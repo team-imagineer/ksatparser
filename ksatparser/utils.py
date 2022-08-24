@@ -39,12 +39,31 @@ def pdf2pngs(pdf_path):
     return pngs
 
 
-def get_contour_ends(long_block, kernel_width=15, kernel_height=25, iterations=5):
+def cut_bottom(part):
+    # preprocessing
+    _, thresh = cv2.threshold(part, 220, 255, cv2.THRESH_BINARY)
+    thresh = cv2.bitwise_not(thresh)
+
+    thresh_sum = np.sum(thresh, axis=1)
+    cut_y = part.shape[0]
+    bottom_padding = 7
+    for i in reversed(range(thresh.shape[0])):
+        value = thresh_sum[i]
+        if value != 0:
+            cut_y = i+bottom_padding
+            break
+
+    return part[:cut_y][:]
+
+
+
+def get_contour_ends(long_block, vertical_height, kernel_width=15, kernel_height=25, iterations=5):
     """
     Descriptions:
         make contours
     Args:
         long_block: numpy array
+        vertical_height: T에서 vertical line의 높이
         kernel_width: dilate/erode 할 때 kernel의 width
         kernel_height: dilate/erode 할 때 kernel의 height
         iterations: dilate/erode iteration 횟수
@@ -72,7 +91,8 @@ def get_contour_ends(long_block, kernel_width=15, kernel_height=25, iterations=5
     # ends list
     ends = []
 
-    min_width, min_height = 250, 230
+    height_rate = 0.6
+    min_width, min_height = 250, vertical_height*height_rate
     for contour in contours:
         (x, y, w, h) = cv2.boundingRect(contour)
         if w >= min_width and h > min_height:

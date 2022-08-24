@@ -3,7 +3,7 @@ import numpy as np
 import cv2
 from pathlib import Path
 import pdfplumber
-from .utils import pdf2pngs, get_contour_ends, get_xy, find_jimoon_words, find_problem_words, get_min_max_x
+from .utils import pdf2pngs, get_contour_ends, get_xy, find_jimoon_words, find_problem_words, get_min_max_x, cut_bottom
 
 
 def parse_problem(pdf_path, output_dir):
@@ -52,6 +52,11 @@ def parse_problem(pdf_path, output_dir):
     # concatenate
     long_block = np.concatenate(blocks)
 
+    # contour ends (공백 부분을 찾는 함수)
+    vertical_height = blocks[3].shape[0]
+    print(vertical_height)
+    contour_ends = get_contour_ends(long_block, vertical_height)
+
     # concatenate jimoons_list, probs_list
     add_height = 0
     jimoons = []
@@ -69,7 +74,7 @@ def parse_problem(pdf_path, output_dir):
         for x0, y0, x1, y1 in probs_list[i]:
             prob_idx += 1
             # print(prob_names[prob_idx])
-            if x0 >= 40:  # delete not a problem
+            if x0 >= 70:  # delete not a problem
                 continue
             y0 += add_height
             y1 += add_height
@@ -81,8 +86,10 @@ def parse_problem(pdf_path, output_dir):
 
     # prob_names change
     prob_names = tmp_prob_names
+    print(len(probs))
+    print(prob_names)
 
-    save_problems(pdf_path, long_block, jimoons, jimoon_names, probs, prob_names, output_dir)
+    save_problems(pdf_path, long_block, jimoons, jimoon_names, probs, prob_names, contour_ends, output_dir)
 
     print(f"parse {pdf_path} complete")
 
@@ -219,7 +226,7 @@ def get_elements_list(pdf_path, imgs, jbox_width):
     return blocks, jimoons_list, jimoon_names, probs_list, prob_names
 
 
-def save_problems(pdf_path, long_block, jimoons, jimoon_names, probs, prob_names, output_dir):
+def save_problems(pdf_path, long_block, jimoons, jimoon_names, probs, prob_names, contour_ends, output_dir):
     '''
         preresquite : run make_output_dir() method before run this method
         description : split long block into jimoons and probs and save it into already maden output dir
@@ -232,8 +239,6 @@ def save_problems(pdf_path, long_block, jimoons, jimoon_names, probs, prob_names
     output_dir = Path(output_dir)
     if not os.path.exists(output_dir):
         os.mkdir(output_dir)
-
-    contour_ends = get_contour_ends(long_block)
 
     # make elements list with jimoons' y0, probs' y0, contour ends' y value
     # elements : list((y, category, name))
@@ -274,6 +279,10 @@ def save_problems(pdf_path, long_block, jimoons, jimoon_names, probs, prob_names
 
     elements.sort()
 
+    # 마지막 문제를 살리기 위해 추가
+    long_height = long_block.shape[0]
+    elements.append((long_height,2,''))
+
     tmp = test_name.split('_')
     year = int(tmp[0])
     month = int(tmp[1])
@@ -306,7 +315,7 @@ def save_problems(pdf_path, long_block, jimoons, jimoon_names, probs, prob_names
         print(f'save {element_name}')
         print(f'next element : {en}')
         try:
-            cv2.imwrite(str(output_dir / file_name), part)
+            cv2.imwrite(str(output_dir / file_name), cut_bottom(part))
         except Exception as e:
             print(e)
             print(file_name, part.shape)

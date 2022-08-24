@@ -2,8 +2,8 @@ import os
 import ksatparser
 from pathlib import Path
 
-output_dir = Path("./tmp/")
-pdf_dir = Path("./pdf/problem/")
+output_dir = Path("./tmp_explanation/")
+pdf_dir = Path("./pdf/explanation/")
 # ['2022_4'
 # ,'2016_10'
 # ,'2018_10'
@@ -20,11 +20,11 @@ pdf_dir = Path("./pdf/problem/")
 # = ['6','9','11']
 
 years = [str(y) for y in range(2016, 2023)]
-months = ['3','4','7', '10']
+months = ['6','9','11']
 # months
 
-# todo = [y+'_'+m for m in months for y in years]
-todo = ['2016_10']
+todo = [y+'_'+m for m in months for y in years]
+# todo = ['2022_6']
 print(todo)
 
 error_files = []
@@ -43,7 +43,10 @@ for pdf_file in os.listdir(pdf_dir):
         print(pdf_file)
 
         pdf_path = pdf_dir/pdf_file
-        ksatparser.parse_problem(pdf_path, output_dir)
+        ksatparser.parse_ebs_solution(pdf_path, output_dir)
     except Exception as e:
         error_files.append(pdf_file)
         error_msgs.append(e)
+
+print(error_files)
+print(error_msgs)
