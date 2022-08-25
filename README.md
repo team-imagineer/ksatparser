@@ -1,11 +1,10 @@
-## 패키지 설정하는 법
+## 사용법
+```python
+import ksatparser
 
-```bash
-$ python ./setup.py install
+pdf_path = "your_pdf_path"
+output_dir = "your_output_dir"
 
-# image parsing
-$ python demo/demo.py --input data/raw/problem/2/*.png --output data/crop/2
-
-# pdf converter - PNG 압축 때문에 오래걸립니다.
-$ python demo/pdf_convert.py --input data/pdf/2.pdf --output data/raw/problem/2
+ksatparser.parse_problem(pdf_path, output_dir) # 기출문제 파싱
+ksatparser.parse_solution(pdf_path, output_dir) # 해설지 파싱
 ```
