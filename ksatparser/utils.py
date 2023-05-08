@@ -162,12 +162,12 @@ def find_jimoon_words(words):
         if ']' in word["text"] and '[' in word["text"]:
             inword = word['text'].split('[')[1].split(']')[0]
             print(inword)
-            if ('～' in inword or '~' in inword):
+            if ('～' in inword or '~' in inword or '∼' in inword or '-' in inword):
                 jimoons.append(word)
             continue
 
         # 예외처리 (교육청) 2016_10 [20~ 23] - word가 20만 인식
-        if '[' in word['text'] and (word['text'][-1]=='~' or word['text'][-1]=='～'):
+        if '[' in word['text'] and (word['text'][-1]=='~' or word['text'][-1]=='～' or word['text'][-1]=='∼'):
             jimoons.append(word)
             continue
         if '[' in word['text'] and word['text'][-1].isdigit():

@@ -19,13 +19,13 @@ pdf_dir = Path("./pdf/problem/")
 
 # = ['6','9','11']
 
-years = [str(y) for y in range(2016, 2021)]
-months = ['3','4','7','10']
+# years = [str(y) for y in range(2016, 2021)]
+# months = ['3','4','7','10']
 # months
 
-todo = [y+'_'+m for m in months for y in years]
+# todo = [y+'_'+m for m in months for y in years]
 # todo = ['2016_3']
-print(todo)
+# print(todo)
 
 error_files = []
 error_msgs = []

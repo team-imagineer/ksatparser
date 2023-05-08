@@ -35,6 +35,7 @@ def parse_problem(pdf_path, output_dir):
     x0, _, x2, _ = T[1]
 
     # jimoon box width
+
     jbox_width = int(((x2 - x0) / 2) * 0.85)  # T의 width의 절반의 0.85배 이상을 jimoon box 의 width라고 봄
 
     blocks, jimoons_list, jimoon_names, probs_list, prob_names = get_elements_list(pdf_path, imgs, jbox_width)
@@ -284,8 +285,6 @@ def save_problems(pdf_path, long_block, jimoons, jimoon_names, probs, prob_names
     elements.append((long_height,2,''))
 
     tmp = test_name.split('_')
-    year = int(tmp[0])
-    month = int(tmp[1])
 
     # split and save
     last_jimoon = "0-0"  # check if problem is in lastest jimoon
@@ -321,3 +320,6 @@ def save_problems(pdf_path, long_block, jimoons, jimoon_names, probs, prob_names
             print(file_name, part.shape)
             print(f"y0 : {y0}, y1 : {y1}")
             print(f"{cat}, {element_name}, {ct}, {en}")
+
+    # save long block
+    cv2.imwrite(str(output_dir / ('long_' + test_name + '.png')), long_block)
