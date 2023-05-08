@@ -36,4 +36,4 @@ ksatparser.parse_solution(pdf_path, output_dir) # 해설지 파싱
 ## 안내사항
 
 - 이 성과는 2022년도 과학기술정보통신부의 재원으로 정보통신기획평가원의 지원을 받아 수행된 연구입니다. (IITP-2022-SW마에스트로과정)
-- [서당개 애플리케이션](https://github.com/Mango-Juice/im-application-public) (태블릿 수능 국어 앱) 의 컨텐츠를 재가공하기 위해 쓰인 알고리즘입니다.
+- [서당개 애플리케이션](https://github.com/team-imagineer/im-application-public) (태블릿 수능 국어 앱) 의 컨텐츠를 재가공하기 위해 쓰인 알고리즘입니다.
