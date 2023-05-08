@@ -19,14 +19,6 @@ pdf_dir = Path("./pdf/explanation/")
 
 # = ['6','9','11']
 
-years = [str(y) for y in range(2016, 2023)]
-months = ['6','9','11']
-# months
-
-todo = [y+'_'+m for m in months for y in years]
-# todo = ['2022_6']
-print(todo)
-
 error_files = []
 error_msgs = []
 
@@ -37,8 +29,6 @@ for pdf_file in os.listdir(pdf_dir):
         month = pdf_file[:-4].split('_')[1]
         file_ym = file_name.split('_')[0]+'_'+file_name.split('_')[1]
         if file_type != ".pdf":
-            continue
-        if not file_ym in todo:
             continue
         print(pdf_file)
 
