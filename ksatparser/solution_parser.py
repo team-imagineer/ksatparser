@@ -84,16 +84,16 @@ def parse_ebs_solution(pdf_path, output_dir):
 def get_top_bottom_horizontal_lines(img):
     # canny preprocessing
     thresh1 = 200
-    thresh2 = 20
+    thresh2 = 1000
     dst = cv2.Canny(img, thresh1, thresh2)
 
     # problematic hough
-    lines = cv2.HoughLinesP(dst, 1, np.pi / 180, 50, None, 100, 2)
+    lines = cv2.HoughLinesP(dst, 1, np.pi / 180, 50, None, 1, 1)
 
     horizontal_lines = []
     for line in lines:
         xlen = abs(line[0][2] - line[0][0])
-        width_thresh = img.shape[1] * 0.6
+        width_thresh = img.shape[1] * 0.5
         if xlen >= width_thresh:
             horizontal_lines.append(line[0])
 
@@ -104,6 +104,9 @@ def get_top_bottom_horizontal_lines(img):
     return top_line, bottom_line
 
 
+'''
+평가원 ebs 해설지 기준
+'''
 def get_ebs_solution_elements(pdf_path, imgs):
     blocks = []
     probs_list = []
@@ -152,7 +155,19 @@ def get_ebs_solution_elements(pdf_path, imgs):
             ymin = top_hline[1]
             ymax = bottom_hline[1]
             xs = (top_hline[0], top_hline[2], bottom_hline[0], bottom_hline[2])
-            xmin, xmax = min(xs), max(xs)
+            xmin, xmax = min(xs), max(xs)+20
+
+            # xmin, xmax 오류 수정
+            cimg = img.copy()
+            cimg ^= 255
+            for idx in range(img.shape[1]):
+                if np.sum(cimg[:,idx]) != 0:
+                    xmin = min(xmin, idx)
+            for idx in reversed(range(img.shape[1])):
+                if np.sum(cimg[:,idx]) != 0:
+                    xmax = max(xmax, idx)
+
+
 
             # 수평선이 남아있는 것을 방지
             ymin += 7
@@ -220,9 +235,9 @@ def save_ebs_solution(pdf_path, long_block, jimoons, jimoon_names, probs, prob_n
                     break
 
             # ebs해설지에서 정답으로 한번 낳온 후에 해설이 나옴
-            if not problem_dict[int(name)]:
-                problem_dict[int(name)] = True
-                continue
+            # if not problem_dict[int(name)]:
+            #     problem_dict[int(name)] = True
+            #     continue
 
             # 문제 번호와 맞지 않는 경우 제외
             if name != str(problem_index):
@@ -244,12 +259,11 @@ def save_ebs_solution(pdf_path, long_block, jimoons, jimoon_names, probs, prob_n
         elements.append((long_height, 2, ''))
 
         tmp = test_name.split('_')
-        year = int(tmp[0])
-        month = int(tmp[1])
 
         # split and save
         last_jimoon = "0-0"  # check if problem is in lastest jimoon
         jimoon_index = 1
+
         for i in range(len(elements) - 1):
             y0, cat, element_name = elements[i]
             y1, ncat, nen = elements[i + 1]
@@ -257,22 +271,26 @@ def save_ebs_solution(pdf_path, long_block, jimoons, jimoon_names, probs, prob_n
             # 지문해설은 번호가 반복적으로 나오는 경우가 있음 (생략)
             if cat == ncat == 0:
                 continue
+
             part = long_block[y0:y1, :]
 
             # jimoon
             if cat == 0:
-                file_name = '_'.join([test_name, "p" + str(jimoon_index), "solution"]) + ".png"
+                file_name = '_'.join([test_name, "p" + str(jimoon_index)]) + ".png"
                 last_jimoon = element_name
                 jimoon_index += 1
 
             # problem
             elif cat == 1:
 
-                file_name = '_'.join([test_name, element_name, "solution"]) + ".png"
+                file_name = '_'.join([test_name, element_name]) + ".png"
                 # if int(last_jimoon.split('-')[1]) < int(element_name):  # not in last jimoon
                 # else:  # concluded in last jimoon
 
             else:
+                continue
+
+            if y1-y0 < 140:
                 continue
 
             print(f'save {element_name}')
@@ -284,3 +302,6 @@ def save_ebs_solution(pdf_path, long_block, jimoons, jimoon_names, probs, prob_n
                 print(file_name, part.shape)
                 print(f"y0 : {y0}, y1 : {y1}")
                 print(f"{cat}, {element_name}, {ncat}, {nen}")
+
+        # save long block
+        cv2.imwrite(str(output_dir / ('long_' + test_name + '.png')), long_block)
